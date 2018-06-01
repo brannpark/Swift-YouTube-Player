@@ -145,7 +145,7 @@ open class YouTubePlayerView: UIView {
         }
         
         let htmlString = rawHTMLString.replacingOccurrences(of: "%@", with: jsonParameters)
-        webView.loadHTMLString(htmlString, baseURL: nil)
+        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://www.youtube.com"))
     }
     
     
