@@ -52,14 +52,12 @@ public extension YouTubePlayerDelegate {
 /** Embed and control YouTube videos */
 open class YouTubePlayerView: UIView {
     
-    lazy private var webView: WKWebView = {
-        let configs = wkConfigs
-        configs.allowsInlineMediaPlayback = true
-        
-        let webView = WKWebView(frame: bounds, configuration: configs)
+    lazy private var webView: UIWebView = {
+        let webView = UIWebView(frame: bounds)
+        webView.allowsInlineMediaPlayback = true
         webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.navigationDelegate = self
+        webView.backgroundColor = .black
+        webView.delegate = self
         webView.scrollView.isScrollEnabled = false
         return webView
     }()
@@ -97,7 +95,7 @@ open class YouTubePlayerView: UIView {
         addWebViewAndAnchorToEdges(webView)
     }
     
-    private func addWebViewAndAnchorToEdges(_ webView: WKWebView) {
+    private func addWebViewAndAnchorToEdges(_ webView: UIWebView) {
         addSubview(webView)
         webView.translatesAutoresizingMaskIntoConstraints = false
         
@@ -234,25 +232,21 @@ extension YouTubePlayerView {
     
     private func evaluatePlayerCommand(_ command: String, completion: ((String?) -> Void)? = nil) {
         let fullCommand = "player." + command + ";"
-        webView.evaluateJavaScript(fullCommand) { response, _ in
-            completion?(response as? String)
-        }
+        let response = webView.stringByEvaluatingJavaScript(from: fullCommand)
+        completion?(response as? String)
     }
 }
 
 // MARK: - WebKit Navigation Delegate
 
-extension YouTubePlayerView: WKNavigationDelegate {
-    public func webView(_ webView: WKWebView,
-                        decidePolicyFor navigationAction: WKNavigationAction,
-                        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void)
-    {
-        if let url = navigationAction.request.url, url.scheme == "ytplayer" {
+extension YouTubePlayerView: UIWebViewDelegate {
+    public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
+        if let url = request.url, url.scheme == "ytplayer" {
             handleJSEvent(url)
-            decisionHandler(.cancel)
-            return
+            return false
         }
-        decisionHandler(.allow)
+        
+        return true
     }
 }
 
