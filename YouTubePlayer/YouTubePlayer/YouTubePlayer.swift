@@ -190,6 +190,16 @@ extension YouTubePlayerView {
         evaluatePlayerCommand(#function)
     }
     
+    open func isMuted(completion: @escaping (Bool) -> Void) {
+        evaluatePlayerCommand("isMuted()", completion: { response in
+            if response == "true" {
+                completion(true)
+            } else {
+                completion(false)
+            }
+        })
+    }
+    
     open func playVideo() {
         evaluatePlayerCommand(#function)
     }
@@ -233,7 +243,7 @@ extension YouTubePlayerView {
     private func evaluatePlayerCommand(_ command: String, completion: ((String?) -> Void)? = nil) {
         let fullCommand = "player." + command + ";"
         let response = webView.stringByEvaluatingJavaScript(from: fullCommand)
-        completion?(response as? String)
+        completion?(response)
     }
 }
 
