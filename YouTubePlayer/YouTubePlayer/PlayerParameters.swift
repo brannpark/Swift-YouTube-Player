@@ -58,4 +58,9 @@ extension PlayerParameters {
         set { playerVars.startAt = newValue }
     }
     
+    public var showLogo: Bool {
+        get { return playerVars.showLogo }
+        set { playerVars.showLogo = newValue }
+    }
+    
 }

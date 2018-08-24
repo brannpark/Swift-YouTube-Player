@@ -82,6 +82,7 @@ open class YouTubePlayerView: UIView {
     /** Used to respond to player events */
     open weak var delegate: YouTubePlayerDelegate?
     
+    open var allowChangeURL: Bool = true
     
     // MARK: Various methods for initialization
     
@@ -251,11 +252,15 @@ extension YouTubePlayerView {
 
 extension YouTubePlayerView: UIWebViewDelegate {
     public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
-        if let url = request.url, url.scheme == "ytplayer" {
-            handleJSEvent(url)
-            return false
+        if let url = request.url, let scheme = url.scheme {
+            if scheme == "ytplayer" {
+                handleJSEvent(url)
+                return false
+            }
+            if !allowChangeURL && scheme.starts(with: "http") {
+                return false
+            }
         }
-        
         return true
     }
 }

@@ -37,13 +37,18 @@ struct PlayerVars: Encodable {
         didSet { listType = "playlist" }
     }
     
+    var showLogo: Bool {
+        get { return modestbranding.boolValue }
+        set { modestbranding = newValue.stringValue }
+    }
+    
     // The variables that will be encoded
     private var playsinline = false.stringValue
     private var showinfo = false.stringValue
     private var controls = false.stringValue
     private var rel = false.stringValue
     private var start = String(0)
-    
+    private var modestbranding = false.stringValue
     private var listType: String? = nil
 }
 
