@@ -37,7 +37,7 @@ struct PlayerVars: Encodable {
         didSet { listType = "playlist" }
     }
     
-    var showLogo: Bool {
+    var hideLogo: Bool {
         get { return modestbranding.boolValue }
         set { modestbranding = newValue.stringValue }
     }

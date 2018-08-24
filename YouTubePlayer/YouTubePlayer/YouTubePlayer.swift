@@ -252,13 +252,27 @@ extension YouTubePlayerView {
 
 extension YouTubePlayerView: UIWebViewDelegate {
     public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
-        if let url = request.url, let scheme = url.scheme {
+        if let url = request.url,
+            let scheme = url.scheme {
+            
             if scheme == "ytplayer" {
                 handleJSEvent(url)
                 return false
             }
-            if !allowChangeURL && scheme.starts(with: "http") {
-                return false
+            if let host = url.host {
+                if !host.contains("youtube.com") { // do not allow other hosts except youtube.com
+                    return false
+                }
+                if url.path == "/" { // allow "/" path for initial html load
+                    return true
+                }
+                // If playsInline options is enabed, then do not allow video url does not have "embed" path
+                if playerParams.playsInline, !url.absoluteString.contains("/embed") {
+                    if UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.openURL(url)
+                    }
+                    return false
+                }
             }
         }
         return true
