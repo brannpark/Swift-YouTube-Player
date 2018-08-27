@@ -149,7 +149,7 @@ open class YouTubePlayerView: UIView {
         }
         
         let htmlString = rawHTMLString.replacingOccurrences(of: "%@", with: jsonParameters)
-        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://www.youtube.com"))
+        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://www.youtube.com/base"))
     }
     
     
@@ -271,20 +271,25 @@ extension YouTubePlayerView: WKNavigationDelegate {
                     return decisionHandler(.cancel)
                     
                 }
-                if url.path == "/" { // allow "/" path for initial html load
+                if url.path == "/base" { // allow "/" path for initial html load
                     return decisionHandler(.allow)
                     
                 }
                 // If playsInline options is enabed, then do not allow video url does not have "embed" path
-                if playerParams.playsInline, !url.absoluteString.contains("/embed") {
+                if playerParams.playsInline {
+                    if url.absoluteString.contains("/embed") {
+                        return decisionHandler(.allow)
+                    }
                     if UIApplication.shared.canOpenURL(url) {
                         UIApplication.shared.openURL(url)
                     }
                     return decisionHandler(.cancel)
+                } else {
+                    return decisionHandler(.allow)
                 }
             }
         }
-        return decisionHandler(.allow)
+        return decisionHandler(.cancel)
     }
 }
 
