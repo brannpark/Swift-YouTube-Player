@@ -52,12 +52,17 @@ public extension YouTubePlayerDelegate {
 /** Embed and control YouTube videos */
 open class YouTubePlayerView: UIView {
     
-    lazy private var webView: UIWebView = {
-        let webView = UIWebView(frame: bounds)
-        webView.allowsInlineMediaPlayback = true
+    lazy private var webView: WKWebView = {
+        let config = wkConfigs
+        config.allowsInlineMediaPlayback = true
+        config.allowsAirPlayForMediaPlayback = true
+        config.allowsPictureInPictureMediaPlayback = true
+        
+        let webView = WKWebView(frame: bounds, configuration: config)
+        
         webView.isOpaque = false
         webView.backgroundColor = .black
-        webView.delegate = self
+        webView.navigationDelegate = self
         webView.scrollView.isScrollEnabled = false
         return webView
     }()
@@ -96,7 +101,7 @@ open class YouTubePlayerView: UIView {
         addWebViewAndAnchorToEdges(webView)
     }
     
-    private func addWebViewAndAnchorToEdges(_ webView: UIWebView) {
+    private func addWebViewAndAnchorToEdges(_ webView: WKWebView) {
         addSubview(webView)
         webView.translatesAutoresizingMaskIntoConstraints = false
         
@@ -156,14 +161,14 @@ open class YouTubePlayerView: UIView {
         switch event {
         case .ready:
             delegate?.playerReady(self)
-
+            
         case .error:
             if let data = eventURL.queryParams["data"], let error = PlayerError(rawValue: data) {
                 delegate?.playerDidEndError(self, error: error)
             } else {
                 delegate?.playerDidEndError(self, error: .unexpected)
             }
-
+            
         case .stateChange:
             if let data = eventURL.queryParams["data"], let newState = PlayerState(rawValue: data) {
                 playerState = newState
@@ -243,39 +248,43 @@ extension YouTubePlayerView {
     
     private func evaluatePlayerCommand(_ command: String, completion: ((String?) -> Void)? = nil) {
         let fullCommand = "player." + command + ";"
-        let response = webView.stringByEvaluatingJavaScript(from: fullCommand)
-        completion?(response)
+        webView.evaluateJavaScript(fullCommand, completionHandler: { (response, _) in
+            completion?(response as? String)
+        })
     }
 }
 
 // MARK: - WebKit Navigation Delegate
-
-extension YouTubePlayerView: UIWebViewDelegate {
-    public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
+extension YouTubePlayerView: WKNavigationDelegate {
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        let request = navigationAction.request
         if let url = request.url,
             let scheme = url.scheme {
             
             if scheme == "ytplayer" {
                 handleJSEvent(url)
-                return false
+                return decisionHandler(.cancel)
+                
             }
             if let host = url.host {
                 if !host.contains("youtube.com") { // do not allow other hosts except youtube.com
-                    return false
+                    return decisionHandler(.cancel)
+                    
                 }
                 if url.path == "/" { // allow "/" path for initial html load
-                    return true
+                    return decisionHandler(.allow)
+                    
                 }
                 // If playsInline options is enabed, then do not allow video url does not have "embed" path
                 if playerParams.playsInline, !url.absoluteString.contains("/embed") {
                     if UIApplication.shared.canOpenURL(url) {
                         UIApplication.shared.openURL(url)
                     }
-                    return false
+                    return decisionHandler(.cancel)
                 }
             }
         }
-        return true
+        return decisionHandler(.allow)
     }
 }
 
@@ -309,3 +318,4 @@ private func printLog(_ strings: CustomStringConvertible...) {
     print(toPrint, separator: " ", terminator: "\n")
     assertionFailure()
 }
+
