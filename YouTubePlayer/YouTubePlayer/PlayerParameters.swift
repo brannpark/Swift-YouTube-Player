@@ -10,9 +10,7 @@ import Foundation
 public class PlayerParameters: Encodable {
     
     var videoId: String? = nil
-    
     private var playerVars = PlayerVars()
-    
     // Hard-coded values
     private let height = "100%"
     private let width  = "100%"
@@ -43,7 +41,7 @@ extension PlayerParameters {
         set { playerVars.showInfo = newValue }
     }
     
-    public var showControls: Bool {
+    public var showControls: String {
         get { return playerVars.showControls }
         set { playerVars.showControls = newValue }
     }
@@ -61,6 +59,5 @@ extension PlayerParameters {
     public var hideLogo: Bool {
         get { return playerVars.hideLogo }
         set { playerVars.hideLogo = newValue }
-    }
-    
+    }    
 }

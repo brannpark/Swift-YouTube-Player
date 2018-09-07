@@ -15,7 +15,7 @@ public enum PlayerState: String {
     case playing = "1"
     case paused = "2"
     case buffering = "3"
-    case queued = "4"
+    case queued = "5" // NOT 4. 
 }
 
 public enum PlaybackQuality: String {
@@ -32,12 +32,14 @@ private enum PlayerEvents: String {
     case error = "onError"
     case stateChange = "onStateChange"
     case playbackQualityChange = "onPlaybackQualityChange"
+    case soundMuteChange = "onSoundMuteChange"
 }
 
 public protocol YouTubePlayerDelegate: class {
     func playerReady(_ videoPlayer: YouTubePlayerView)
     func playerDidEndError(_ videoPlayer: YouTubePlayerView, error: PlayerError)
     func playerStateChanged(_ videoPlayer: YouTubePlayerView, playerState: PlayerState)
+    func playerSoundMuteChanged(_ videoPlayer: YouTubePlayerView, muted: Bool)
     func playerQualityChanged(_ videoPlayer: YouTubePlayerView, playbackQuality: PlaybackQuality)
 }
 
@@ -81,6 +83,13 @@ open class YouTubePlayerView: UIView {
         }
     }
     
+    /** The sound mute state of the video player */
+    private(set) open var muted = false {
+        didSet {
+            delegate?.playerSoundMuteChanged(self, muted: muted)
+        }
+    }
+    
     /** Used to configure the player */
     open var playerParams = PlayerParameters()
     
@@ -112,35 +121,34 @@ open class YouTubePlayerView: UIView {
         bottomAnchor.constraint(equalTo: webView.bottomAnchor).isActive = true
     }
     
-    
-    // MARK: Load player
-    
-    open func loadVideoURL(_ videoURL: URL) {
+    // MARK: Initialize
+    open func initialize() {
+        loadWebView(with: playerParams)
+    }
+
+    open func initializeWith(videoURL: URL) {
         if let videoID = videoURL.youtubeID {
-            loadVideoID(videoID)
+            initializeWith(videoID: videoID)
         } else {
             printLog("Incorrect URL passed: \(videoURL)")
         }
     }
     
-    open func loadVideoID(_ videoID: String) {
+    open func initializeWith(videoID: String? = nil) {
         playerParams.videoId = videoID
-        loadWebView(with: playerParams)
+        initialize()
     }
     
-    open func loadPlaylistID(_ playlistID: String) {
+    open func initializeWith(playlistID: String) {
         playerParams.list = playlistID
-        loadWebView(with: playerParams)
+        initialize()
     }
-    
-    
-    // MARK: Player setup
     
     private func loadWebView(with parameters: PlayerParameters) {
         // Get JSON / HTML strings
         guard
             let encoded = try? JSONEncoder().encode(parameters),
-            let jsonParameters = String(data: encoded, encoding: .utf8),
+            let jsonParameters = String(data: encoded, encoding: .utf8),             
             let path = Bundle(for: YouTubePlayerView.self).path(forResource: "YTPlayer", ofType: "html"),
             let rawHTMLString = try? String(contentsOfFile: path)
             else {
@@ -149,7 +157,8 @@ open class YouTubePlayerView: UIView {
         }
         
         let htmlString = rawHTMLString.replacingOccurrences(of: "%@", with: jsonParameters)
-        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://www.youtube.com/base"))
+        
+        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://www.youtube.com/"))
     }
     
     
@@ -178,6 +187,11 @@ open class YouTubePlayerView: UIView {
             if let data = eventURL.queryParams["data"], let newQuality = PlaybackQuality(rawValue: data) {
                 playbackQuality = newQuality
             }
+            
+        case .soundMuteChange:
+            if let data = eventURL.queryParams["data"] as? String {
+                muted = (data == "true") ? true : false
+            }
         }
     }
 }
@@ -194,20 +208,18 @@ extension YouTubePlayerView {
     
     open func unMute() {
         evaluatePlayerCommand(#function)
+    }        
+    
+    open func cueVideoById(_ videoId: String, startSecond: Int = 0, quality: String = "default") {
+        evaluatePlayerCommand("cueVideoById('\(videoId)', \(startSecond), '\(quality)')")
     }
     
-    open func isMuted(completion: @escaping (Bool) -> Void) {
-        evaluatePlayerCommand("isMuted()", completion: { response in
-            if response == "true" {
-                completion(true)
-            } else {
-                completion(false)
-            }
-        })
+    open func loadVideoById(_ videoId: String, startSecond: Int = 0, quality: String = "default") {
+        evaluatePlayerCommand("loadVideoById('\(videoId)', \(startSecond), '\(quality)')")
     }
     
     open func playVideo() {
-        evaluatePlayerCommand(#function)
+        evaluatePlayerCommand(#function)        
     }
     
     open func pauseVideo() {
@@ -256,6 +268,7 @@ extension YouTubePlayerView {
 
 // MARK: - WebKit Navigation Delegate
 extension YouTubePlayerView: WKNavigationDelegate {
+    
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         let request = navigationAction.request
         if let url = request.url,
@@ -264,17 +277,21 @@ extension YouTubePlayerView: WKNavigationDelegate {
             if scheme == "ytplayer" {
                 handleJSEvent(url)
                 return decisionHandler(.cancel)
-                
             }
+            if scheme == "about" {
+                return decisionHandler(.allow)
+            }
+            
             if let host = url.host {
                 if !host.contains("youtube.com") { // do not allow other hosts except youtube.com
                     return decisionHandler(.cancel)
                     
                 }
-                if url.path == "/base" { // allow "/" path for initial html load
+                
+                if url.path == "" || url.path == "/" {
                     return decisionHandler(.allow)
-                    
                 }
+                
                 // If playsInline options is enabed, then do not allow video url does not have "embed" path
                 if playerParams.playsInline {
                     if url.absoluteString.contains("/embed") {

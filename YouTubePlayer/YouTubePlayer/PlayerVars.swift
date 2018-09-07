@@ -18,9 +18,9 @@ struct PlayerVars: Encodable {
         set { showinfo = newValue.stringValue }
     }
     
-    var showControls: Bool {
-        get { return controls.boolValue }
-        set { controls = newValue.stringValue }
+    var showControls: String {
+        get { return controls }
+        set { controls = newValue }
     }
     
     var showRelatedVideosWhenFinished: Bool {
@@ -49,7 +49,8 @@ struct PlayerVars: Encodable {
     private var rel = false.stringValue
     private var start = String(0)
     private var modestbranding = false.stringValue
-    private var listType: String? = nil
+    private var listType: String = "playlist"    
+        
 }
 
 private extension String {
