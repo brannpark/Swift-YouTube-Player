@@ -261,7 +261,12 @@ extension YouTubePlayerView {
     private func evaluatePlayerCommand(_ command: String, completion: ((String?) -> Void)? = nil) {
         let fullCommand = "player." + command + ";"
         webView.evaluateJavaScript(fullCommand, completionHandler: { (response, _) in
-            completion?(response as? String)
+            if let resp = response {
+                let result = "\(resp)"
+                completion?(result)
+            } else {
+                completion?(nil)
+            }
         })
     }
 }
