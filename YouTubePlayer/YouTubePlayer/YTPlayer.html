@@ -160,46 +160,41 @@
         
         <script>
             
-            var player;
-            var parameters = %@;
-            var proxyPlayerInternalState = false;
-            
-            YT.ready(function() {
-                     console.log('onYouTubeIframeAPIReady');
-                     player = new YT.Player('player', parameters);
-                     
-                     window.location.href = 'ytplayer://onYouTubeIframeAPIReady';
-                     });
-                     
-                     function proxyingPlayerInternalState() {
-                         if (proxyPlayerInternalState) { return; }
-                         
-                         var list = Object.keys(player).filter(function(elem) { return player[elem].muted != undefined; });
-                         if (list.length > 0) {
-                             var keyForInternalState = list[0];
-                             var state = player[keyForInternalState];
-                             
-                             var targetProxy = new Proxy(state, {
-                                                         set: function (target, key, value) {
-                                                         target[key] = value;
-                                                         if (key == 'muted') {
-                                                         window.location.href = 'ytplayer://onSoundMuteChange?data=' + value;
-                                                         }
-                                                         }
-                                                         });
-                                                         player[keyForInternalState] = targetProxy;
-                                                         proxyPlayerInternalState = true;
-                         }
-                     }
+        var player;
+        var parameters = %@;
         
+        YT.ready(function() {
+                 console.log('onYouTubeIframeAPIReady');
+                 player = new YT.Player('player', parameters);
+                 window.location.href = 'ytplayer://onYouTubeIframeAPIReady';
+         });
+                 
+         function proxyingPlayerInternalState() {
+             var list = Object.keys(player).filter(function(elem) { return typeof player[elem] === "object" && typeof player[elem].muted === "boolean"; });
+             if (list.length > 0) {
+                 console.log("mute key found");
+                 var keyForInternalState = list[0];
+                 var state = player[keyForInternalState];
+                 
+                 var targetProxy = new Proxy(state, {
+                                             set: function (target, key, value) {
+                                                target[key] = value;
+                                                if (key == 'muted') {
+                                                window.location.href = 'ytplayer://onSoundMuteChange?data=' + value;
+                                                }
+                                             }
+                 });
+                 player[keyForInternalState] = targetProxy;
+                 console.log("mute proxy has been setted");
+             }
+         }
+
         function onReady(event) {
+            proxyingPlayerInternalState();
             window.location.href = 'ytplayer://onReady?data=' + event.data;
         }
         
         function onStateChange(event) {
-            if (event.data == YT.PlayerState.BUFFERING) {
-                proxyingPlayerInternalState();
-            }
             window.location.href = 'ytplayer://onStateChange?data=' + event.data;
         }
         
@@ -212,4 +207,5 @@
         </script>
     </body>
 </html>
+
 
