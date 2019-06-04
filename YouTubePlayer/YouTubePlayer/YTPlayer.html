@@ -17,7 +17,6 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, user-scalable=no">
-        <script src="https://www.youtube.com/iframe_api"></script>
         <style>
             body, iframe { margin: 0; padding: 0; }
             body { width: 100vw; height: 100vh; }
@@ -25,9 +24,10 @@
     </head>
     <body>        
         <div id="player"></div>
-
+        <script src="https://www.youtube.com/iframe_api"></script>
         <script>
         var player;
+        var proxingDone = false;
         var parameters = %@;
         
         YT.ready(function() {
@@ -35,21 +35,20 @@
                  player = new YT.Player('player', parameters);
                  window.location.href = 'ytplayer://onYouTubeIframeAPIReady';
          });
-                 
+
          function proxyingPlayerInternalState() {
              var list = Object.keys(player).filter(function(elem) { return typeof player[elem] === "object" && typeof player[elem].muted === "boolean"; });
              if (list.length > 0) {
                  console.log("mute key found");
                  var keyForInternalState = list[0];
                  var state = player[keyForInternalState];
-                 
                  var targetProxy = new Proxy(state, {
-                                             set: function (target, key, value) {
-                                                target[key] = value;
-                                                if (key == 'muted') {
-                                                window.location.href = 'ytplayer://onSoundMuteChange?data=' + value;
-                                                }
-                                             }
+                    set: function (target, key, value) {
+                        target[key] = value;
+                        if (key == 'muted') {
+                            window.location.href = 'ytplayer://onSoundMuteChange?data=' + value;
+                        }
+                    }
                  });
                  player[keyForInternalState] = targetProxy;
                  console.log("mute proxy has been setted");
@@ -57,11 +56,14 @@
          }
 
         function onReady(event) {
-            proxyingPlayerInternalState();
             window.location.href = 'ytplayer://onReady?data=' + event.data;
         }
         
         function onStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING && !proxingDone) {
+                proxyingPlayerInternalState();
+                proxingDone = true;
+            }
             window.location.href = 'ytplayer://onStateChange?data=' + event.data;
         }
         
@@ -74,5 +76,6 @@
         </script>
     </body>
 </html>
+
 
 

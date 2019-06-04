@@ -275,43 +275,28 @@ extension YouTubePlayerView {
 extension YouTubePlayerView: WKNavigationDelegate {
     
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+
         let request = navigationAction.request
-        if let url = request.url,
-            let scheme = url.scheme {
-            
+        if let url = request.url, let scheme = url.scheme {
             if scheme == "ytplayer" {
                 handleJSEvent(url)
-                return decisionHandler(.cancel)
+                decisionHandler(.cancel)
+                return
             }
             if scheme == "about" {
-                return decisionHandler(.allow)
+                decisionHandler(.allow)
+                return
             }
-            
-            if let host = url.host {
-                if !host.contains("youtube.com") { // do not allow other hosts except youtube.com
-                    return decisionHandler(.cancel)
-                    
-                }
-                
-                if url.path == "" || url.path == "/" {
-                    return decisionHandler(.allow)
-                }
-                
-                // If playsInline options is enabed, then do not allow video url does not have "embed" path
-                if playerParams.playsInline {
-                    if url.absoluteString.contains("/embed") {
-                        return decisionHandler(.allow)
-                    }
-                    if UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.openURL(url)
-                    }
-                    return decisionHandler(.cancel)
-                } else {
-                    return decisionHandler(.allow)
-                }
+
+            if navigationAction.navigationType == .linkActivated {
+                decisionHandler(.cancel)
+                UIApplication.shared.openURL(url)
+                return
             }
+            decisionHandler(.allow)
+        } else {
+            decisionHandler(.cancel)
         }
-        return decisionHandler(.cancel)
     }
 }
 
