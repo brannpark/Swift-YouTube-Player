@@ -31,15 +31,13 @@
         var parameters = %@;
         
         YT.ready(function() {
-                 console.log('onYouTubeIframeAPIReady');
                  player = new YT.Player('player', parameters);
                  window.location.href = 'ytplayer://onYouTubeIframeAPIReady';
          });
 
          function proxyingPlayerInternalState() {
-             var list = Object.keys(player).filter(function(elem) { return typeof player[elem] === "object" && typeof player[elem].muted === "boolean"; });
+             var list = Object.keys(player).filter(function(elem) { return typeof (player[elem] || {}).muted === "boolean"; });
              if (list.length > 0) {
-                 console.log("mute key found");
                  var keyForInternalState = list[0];
                  var state = player[keyForInternalState];
                  var targetProxy = new Proxy(state, {
@@ -51,7 +49,6 @@
                     }
                  });
                  player[keyForInternalState] = targetProxy;
-                 console.log("mute proxy has been setted");
              }
          }
 
